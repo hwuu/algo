@@ -1,5 +1,5 @@
 //
-// Chapter 02. Getting Started
+// Chapter 04. Divide-and-Conquer
 //
 // Maximum-Subarray Problem (P68~74)
 //
