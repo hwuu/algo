@@ -3,6 +3,8 @@ Notes of 'Introduction to Algorithms'
 
 _Created: 04/16/2014, Modified: 04/21/2014_
 
+Note: Solutions of exercises and problems in Chapter 1 to 10 can be found at http://clrs.skanev.com.
+
 # Part I. Foundations
 
 ## Chapter 02. Getting Started
@@ -76,4 +78,5 @@ Since 04/16/2014
 * Min-max algorithm in with \\(3 \cdot n / 2\\) comparisons: P214.
 * Find the second minimum element with \\(n + \lg n - 2\\) comparisons in worst cast: P215. Ref: http://goo.gl/nZ4dBH.
 * RANDOMIZED-SELECT in \\(O(n)\\) (expected) and \\(O(n^2)\\) (worse case): P215~219.
-
+* SELECT in \\(O(n)\\) in worse case: P220~222.
+* Excercise 9.3-1: Group of 7 and group of 3: http://clrs.skanev.com/09/03/01.html.
