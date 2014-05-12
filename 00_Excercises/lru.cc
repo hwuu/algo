@@ -3,6 +3,9 @@
 //
 // Hao Wu, 05/12/2014
 //
+// Reference 1: http://hawstein.com/posts/lru-cache-impl.html
+// Reference 2: http://developer.51cto.com/art/200907/138772.htm
+//
 
 #include <iostream>
 #include <string>
