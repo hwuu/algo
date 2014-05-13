@@ -7,9 +7,11 @@
 // Reference 2: http://developer.51cto.com/art/200907/138772.htm
 //
 // Note:
-//   In Put/Get, to find a key in KeyEntryMap we can write the following code:
+//   In Put/Get methods of class Cache, to find a key in KeyEntryMap
+//   we can write the following code:
 //     >> typename KeyEntryMap::iterator it = key_entry_map_.find(key);
-//   The reason of add 'typename': http://goo.gl/LPSJQI.
+//   The reason of add 'typename':
+//     http://goo.gl/LPSJQI.
 //   Or, in C++11 we can also use:
 //     >> auto it = key_entry_map_.find(key);
 //   In addition, the following link provides discussions on how to find
