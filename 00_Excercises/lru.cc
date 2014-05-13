@@ -6,6 +6,16 @@
 // Reference 1: http://hawstein.com/posts/lru-cache-impl.html
 // Reference 2: http://developer.51cto.com/art/200907/138772.htm
 //
+// Note:
+//   In Put/Get, to find a key in KeyEntryMap we can write the following code:
+//     >> typename KeyEntryMap::iterator it = key_entry_map_.find(key);
+//   The reason of add 'typename': http://goo.gl/LPSJQI.
+//   Or, in C++11 we can also use:
+//     >> auto it = key_entry_map_.find(key);
+//   In addition, the following link provides discussions on how to find
+//   a key in a hash map efficiently:
+//     http://goo.gl/t5VYXW
+//
 
 #include <iostream>
 #include <string>
@@ -60,8 +70,8 @@ Cache<K, V>::Cache(int capacity)
   for (int i = 0; i < (int)z_entry_.size(); i++) {
     free_entry_list_.push_back(&(z_entry_[i]));
   }
-  head_ = new CacheEntry<K, V>();
-  tail_ = new CacheEntry<K, V>();
+  head_ = new Entry();
+  tail_ = new Entry();
   head_->prev = NULL;
   head_->next = tail_;
   tail_->prev = head_;
@@ -82,39 +92,34 @@ Cache<K, V>::~Cache()
 template<class K, class V>
 void Cache<K, V>::Put(const K& key, const V& value)
 {
-  // The reason of add 'typename': http://goo.gl/LPSJQI
-  // Or, in C++11 we can use: auto it = key_entry_map_.find(key);
-  typename KeyEntryMap::iterator it = key_entry_map_.find(key);
-  if (it != key_entry_map_.end()) {
-    Entry* p = it->second;
+  Entry* p = key_entry_map_[key];
+  if (p != NULL) {
     p->value = value;
     Detach(p);
     Attach(p);
   } else {
-    if (free_entry_list_.size() == 0) {
-      Entry* p = tail_->prev;
-      Detach(p);
-      free_entry_list_.push_back(p);
-      key_entry_map_.erase(p->key);
+    if (free_entry_list_.empty()) {
+      Entry* q = tail_->prev;
+      Detach(q);
+      free_entry_list_.push_back(q);
+      key_entry_map_.erase(q->key);
     }
-    CacheEntry<K, V>* p = free_entry_list_.back();
+    p = free_entry_list_.back();
     p->key = key;
     p->value = value;
     Attach(p);
     free_entry_list_.pop_back();
-    key_entry_map_.insert(make_pair<K, CacheEntry<K, V>*>(key, p));
+    key_entry_map_[key] = p;
   }
 }
 
 //
 
-
 template<class K, class V>
 void Cache<K, V>::Get(const K& key, V** pp_value)
 {
-  typename KeyEntryMap::iterator it = key_entry_map_.find(key);
-  if (it != key_entry_map_.end()) {
-    Entry* p = it->second;
+  Entry* p = key_entry_map_[key];
+  if (p != NULL) {
     *pp_value = &(p->value);
     Detach(p);
     Attach(p);
@@ -142,7 +147,6 @@ void Cache<K, V>::Detach(Entry* p)
   p->prev->next = p->next;
   p->next->prev = p->prev;
 }
- 
 
 //
 ///
@@ -157,7 +161,11 @@ int main()
   cache.Get(1, &p_s);
   cache.Put(3, "ghi");
   cache.Put(4, "xyz");
-  cache.Get(2, &p_s);
+  cache.Put(3, "ghijk");
+  cache.Get(1, &p_s);
+  cache.Get(1, &p_s);
+  cache.Get(1, &p_s);
+  cache.Get(3, &p_s);
   if (p_s == NULL) {
     cout << "Cache miss." << endl;
   } else {
