@@ -16,6 +16,13 @@
 ///
 //
 
+inline int max(int x, int y)
+{
+  return x < y ? y : x;
+}
+
+//
+
 int find_maximum_subarray(int* a, int n)
 {
   //
@@ -27,10 +34,8 @@ int find_maximum_subarray(int* a, int n)
   b[0] = a[0];
   c[0] = a[0];
   for (int i = 1; i < n; i++) {
-    int s1 = b[i - 1];
-    int s2 = c[i - 1] < 0 ? a[i] : c[i - 1] + a[i];
-    b[i] = s1 > s2 ? s1 : s2;
-    c[i] = s2;
+    c[i] = max(c[i - 1] + a[i], a[i]);
+    b[i] = max(b[i - 1], c[i]);
   }
   int s = b[n - 1];
   free(b);
