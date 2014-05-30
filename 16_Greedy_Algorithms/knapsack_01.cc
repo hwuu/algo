@@ -28,8 +28,9 @@ int knapsack(int* v, int* w, int n, int wt)
   for (int i = 1; i < n; i++) {
     for (int j = 0; j < m; j++) {
       int v0 = a[(i - 1) * m + j];
-      int w1 = j - w[i];
-      int v1 = w1 >= 0 ? a[(i - 1) * m + w1] + v[i]: 0;
+      int v1 = (j - w[i]) >= 0
+               ? a[(i - 1) * m + (j - w[i])] + v[i]
+               : 0;
       a[i * m + j] = v0 > v1 ? v0 : v1;
       //printf("%d, a[%d][%d] = %d\n", w1, i, j, a[i * m + j]);
     }
