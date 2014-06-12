@@ -6,7 +6,7 @@
 // string type, since the goal of this implementation is to show
 // the basic structure and main operations of a B-tree.
 //
-// Hao Wu, 06/11/2014
+// Hao Wu, Created: 06/11/2014, Modified: 06/12/2014
 //
 
 #include <cstdio>   // sprintf()
@@ -70,9 +70,9 @@ private:
   //
   void Split(Node* x, int i);
   void Insert(Node* x, const string& key, const string& value);
+  void Merge(Node* x, int i);
   void RotateLeft(Node* x, int i);
   void RotateRight(Node* x, int i);
-  void Merge(Node* x, int i);
   void Delete(Node* x, const string& key);
   void Dump(Node* x, int level);
   //
@@ -143,19 +143,7 @@ void BTree::Search(const string& key, string** pp_value)
 
 void BTree::Insert(const string& key, const string& value)
 {
-  Node* r = root_;
-  if (r->n == m_) {
-    DumpDebugMessage(">>>> Root node split.");
-    Node* s = new Node(m_);
-    root_ = s;
-    s->leaf = false;
-    s->n = 0;
-    s->v_child[0] = r;
-    Split(s, 0);
-    Insert(s, key, value);
-  } else {
-    Insert(r, key, value);
-  }
+  Insert(root_, key, value);
 }
 
 //
@@ -219,34 +207,79 @@ void BTree::Insert(Node* x, const string& key, const string& value)
   // Note that we can guarantee that either x is the root
   // or it has at most 2 * t - 2 (i.e. m - 1) tuples.
   //
-  int i = x->n - 1;
-  if (x->leaf) {
-    DumpDebugMessage(">>>> Insert to leaf node.");
-    while (i >= 0 && key < x->v_tuple[i].key) {
-      x->v_tuple[i + 1] = x->v_tuple[i];
-      i--;
-    }
-    i++;
-    x->v_tuple[i].key = key;
-    x->v_tuple[i].value = value;
-    x->n++;
-    // DiskWrite(x);
+  if (x == root_ && x->n == m_) {
+    DumpDebugMessage(">>>> Root node split.");
+    Node* s = new Node(m_);
+    root_ = s;
+    s->leaf = false;
+    s->n = 0;
+    s->v_child[0] = x;
+    Split(s, 0);
+    Insert(s, key, value);
   } else {
-    DumpDebugMessage(">>>> Insert to non-leaf node.");
-    while (i >= 0 && key < x->v_tuple[i].key) {
-      i--;
-    }
-    i++;
-    // DiskRead(x->v_child[i]);
-    if (x->v_child[i]->n == m_) {
-      DumpDebugMessage(">>>> Node split.");
-      Split(x, i);
-      if (key > x->v_tuple[i].key) {
-        i++;
+    int i = x->n - 1;
+    if (x->leaf) {
+      DumpDebugMessage(">>>> Insert to leaf node.");
+      while (i >= 0 && key < x->v_tuple[i].key) {
+        x->v_tuple[i + 1] = x->v_tuple[i];
+        i--;
       }
+      i++;
+      x->v_tuple[i].key = key;
+      x->v_tuple[i].value = value;
+      x->n++;
+      // DiskWrite(x);
+    } else {
+      DumpDebugMessage(">>>> Insert to non-leaf node.");
+      while (i >= 0 && key < x->v_tuple[i].key) {
+        i--;
+      }
+      i++;
+      // DiskRead(x->v_child[i]);
+      if (x->v_child[i]->n == m_) {
+        DumpDebugMessage(">>>> Node split.");
+        Split(x, i);
+        if (key > x->v_tuple[i].key) {
+          i++;
+        }
+      }
+      Insert(x->v_child[i], key, value);
     }
-    Insert(x->v_child[i], key, value);
   }
+}
+
+//
+
+void BTree::Merge(Node* x, int i)
+{
+  //
+  // Let y = x->v_child[i] and z = x->v_child[i + 1].
+  // Note that we can guarantee that:
+  //   1) x is not a leaf node,
+  //   2) x has at least t tuples,
+  //   3) both y and z have t - 1 tuples, and
+  //   4) both y and z have already been read out from disk.
+  //
+  Node* y = x->v_child[i];
+  Node* z = x->v_child[i + 1];
+  y->n = m_;
+  int t = (m_ + 1) / 2;
+  y->v_tuple[t - 1] = x->v_tuple[i];
+  for (int j = t; j < m_; j++) {
+    y->v_tuple[j] = z->v_tuple[j - t];
+  }
+  for (int j = t; j < m_ + 1; j++) {
+    y->v_child[j] = z->v_child[j - t];
+  }
+  // DiskDelete(z);
+  delete z;
+  for (int j = i; j < x->n - 1; j++) {
+    x->v_tuple[j] = x->v_tuple[j + 1];
+  }
+  for (int j = i + 1; j < x->n; j++) {
+    x->v_child[j] = x->v_child[j + 1];
+  }
+  x->n--;
 }
 
 //
@@ -299,40 +332,6 @@ void BTree::RotateRight(Node* x, int i)
   z->n++;
   x->v_tuple[i] = y->v_tuple[y->n - 1];
   y->n--;
-}
-
-//
-
-void BTree::Merge(Node* x, int i)
-{
-  //
-  // Let y = x->v_child[i] and z = x->v_child[i + 1].
-  // Note that we can guarantee that:
-  //   1) x is not a leaf node,
-  //   2) x has at least t tuples,
-  //   3) both y and z have t - 1 tuples, and
-  //   4) both y and z have already been read out from disk.
-  //
-  Node* y = x->v_child[i];
-  Node* z = x->v_child[i + 1];
-  y->n = m_;
-  int t = (m_ + 1) / 2;
-  y->v_tuple[t - 1] = x->v_tuple[i];
-  for (int j = t; j < m_; j++) {
-    y->v_tuple[j] = z->v_tuple[j - t];
-  }
-  for (int j = t; j < m_ + 1; j++) {
-    y->v_child[j] = z->v_child[j - t];
-  }
-  // DiskDelete(z);
-  delete z;
-  for (int j = i; j < x->n - 1; j++) {
-    x->v_tuple[j] = x->v_tuple[j + 1];
-  }
-  for (int j = i + 1; j < x->n; j++) {
-    x->v_child[j] = x->v_child[j + 1];
-  }
-  x->n--;
 }
 
 //
@@ -417,23 +416,23 @@ void BTree::Delete(Node* x, const string& key)
         }
         if (z->n >= t) {
           //
-          // Case 4b-1. (3a in the book)
+          // Case 4b. (3a in the book)
           //
-          DumpDebugMessage(">>>> Delete case 4b-1.");
+          DumpDebugMessage(">>>> Delete case 4b.");
           RotateLeft(x, i);
           Delete(y, key);
         } else if (y->n >= t) {
           //
-          // Case 4b-2. (3a in the book)
+          // Case 4c. (3a in the book)
           //
-          DumpDebugMessage(">>>> Delete case 4b-2.");
+          DumpDebugMessage(">>>> Delete case 4c.");
           RotateRight(x, i);
           Delete(z, key);
         } else {
           //
-          // Case 4c. (3b in the book)
+          // Case 4d. (3b in the book)
           //
-          DumpDebugMessage(">>>> Delete case 4c.");
+          DumpDebugMessage(">>>> Delete case 4d.");
           Merge(x, i);
           if (root_->n == 0) {
             // DiskDelete(root_);
@@ -510,37 +509,8 @@ void TestSearch(BTree& bt, const string& key)
 
 int main()
 {
-  //BTree bt(7);
-  //BTree bt(15);
   BTree bt(5);
   //
-  /*
-  TestInsert(bt, "A", "");
-  TestInsert(bt, "D", "");
-  TestInsert(bt, "F", "");
-  TestInsert(bt, "H", "");
-  TestInsert(bt, "L", "");
-  TestInsert(bt, "N", "");
-  TestInsert(bt, "P", "");
-  TestInsert(bt, "B", "");
-  TestInsert(bt, "K", "");
-  TestInsert(bt, "J", "");
-  TestInsert(bt, "I", "");
-  TestInsert(bt, "M", "");
-  TestInsert(bt, "O", "");
-  TestInsert(bt, "Q", "");
-  */
-  /*
-  char buff_key[10];
-  char buff_value[100];
-  for (int i = 0; i < 1000; i++) {
-    sprintf(buff_key, "%03d", i);
-    sprintf(buff_value, "Data_%03d", i);
-    TestInsert(bt, buff_key, buff_value);
-  }
-  TestSearch(bt, "574");
-  TestSearch(bt, "1200");
-  */
   string a[] = {
     "A", "B", "C", "D", "E", "G", "J", "K",
     "L", "M", "N", "O", "P", "Q", "R", "S",
@@ -553,9 +523,9 @@ int main()
   }
   //
   TestDelete(bt, "U"); // Case 2b
-  TestDelete(bt, "S"); // Case 4b-1
-  TestDelete(bt, "Q"); // Case 4c
-  TestDelete(bt, "Z"); // Case 4c
+  TestDelete(bt, "S"); // Case 4c
+  TestDelete(bt, "Q"); // Case 4d
+  TestDelete(bt, "Z"); // Case 4d
   //
   TestSearch(bt, "X");
   TestSearch(bt, "F");
@@ -563,21 +533,6 @@ int main()
   return 0;
 }
 
-//
-///
-////
-///
-//
-//
-///
-////
-///
-//
-//
-///
-////
-///
-//
 //
 ///
 ////
