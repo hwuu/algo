@@ -1,7 +1,10 @@
 //
 // Chapter 18. B-Trees
 //
-// Implementation of a demonstrative B-Tree.
+// Implementation of a demonstrative B-tree. Note that this B-tree
+// is fully main-memory-based, and all keys and values are of
+// string type, since the goal of this implementation is to show
+// the basic structure and main operations of a B-tree.
 //
 // Hao Wu, 06/11/2014
 //
@@ -13,6 +16,21 @@
 #include <string>
 //
 using namespace std;
+
+//
+///
+//
+
+const bool _DEBUG = true;
+
+//
+
+void DumpDebugMessage(const string& msg)
+{
+  if (_DEBUG) {
+    cout << msg << endl;
+  }
+}
 
 //
 ///
@@ -127,6 +145,7 @@ void BTree::Insert(const string& key, const string& value)
 {
   Node* r = root_;
   if (r->n == m_) {
+    DumpDebugMessage(">>>> Root node split.");
     Node* s = new Node(m_);
     root_ = s;
     s->leaf = false;
@@ -168,7 +187,7 @@ void BTree::Split(Node* x, int i)
   z->leaf = y->leaf;
   int t = (m_ + 1) / 2;
   z->n = t - 1;
-  for (int j = 0; j < t; j++) {
+  for (int j = 0; j < t - 1; j++) {
     z->v_tuple[j] = y->v_tuple[j + t];
   }
   if (!y->leaf) {
@@ -202,6 +221,7 @@ void BTree::Insert(Node* x, const string& key, const string& value)
   //
   int i = x->n - 1;
   if (x->leaf) {
+    DumpDebugMessage(">>>> Insert to leaf node.");
     while (i >= 0 && key < x->v_tuple[i].key) {
       x->v_tuple[i + 1] = x->v_tuple[i];
       i--;
@@ -212,12 +232,14 @@ void BTree::Insert(Node* x, const string& key, const string& value)
     x->n++;
     // DiskWrite(x);
   } else {
+    DumpDebugMessage(">>>> Insert to non-leaf node.");
     while (i >= 0 && key < x->v_tuple[i].key) {
       i--;
     }
     i++;
     // DiskRead(x->v_child[i]);
     if (x->v_child[i]->n == m_) {
+      DumpDebugMessage(">>>> Node split.");
       Split(x, i);
       if (key > x->v_tuple[i].key) {
         i++;
@@ -330,7 +352,7 @@ void BTree::Delete(Node* x, const string& key)
       //
       // Case 1.
       //
-      cout << "case 1" << endl;
+      DumpDebugMessage(">>>> Delete case 1.");
       for (int j = i; j < x->n - 1; j++) {
         x->v_tuple[j] = x->v_tuple[j + 1];
       }
@@ -343,7 +365,7 @@ void BTree::Delete(Node* x, const string& key)
         //
         // Case 2a.
         //
-        cout << "case 2a" << endl;
+        DumpDebugMessage(">>>> Delete case 2a.");
         Tuple tuple0 = y->v_tuple[y->n - 1];
         x->v_tuple[i] = tuple0;
         Delete(y, tuple0.key);
@@ -354,7 +376,7 @@ void BTree::Delete(Node* x, const string& key)
           //
           // Case 2b.
           //
-          cout << "case 2b" << endl;
+          DumpDebugMessage(">>>> Delete case 2b.");
           Tuple tuple0 = z->v_tuple[0];
           x->v_tuple[i] = tuple0;
           Delete(z, tuple0.key);
@@ -362,7 +384,7 @@ void BTree::Delete(Node* x, const string& key)
           //
           // Case 2c.
           //
-          cout << "case 2c" << endl;
+          DumpDebugMessage(">>>> Delete case 2c.");
           Merge(x, i);
           Delete(y, key);
         }
@@ -371,7 +393,7 @@ void BTree::Delete(Node* x, const string& key)
   } else {
     if (x->leaf) {
       // Case 3: Not found, do nothing.
-      cout << "case 3" << endl;
+      DumpDebugMessage(">>>> Delete case 3.");
     } else {
       // DiskRead(x->v_child[i]);
       Node* y = x->v_child[i];
@@ -380,7 +402,7 @@ void BTree::Delete(Node* x, const string& key)
         //
         // Case 4a.
         //
-        cout << "case 4a" << endl;
+        DumpDebugMessage(">>>> Delete case 4a.");
         Delete(y, key);
       } else {
         Node* z;
@@ -397,28 +419,28 @@ void BTree::Delete(Node* x, const string& key)
           //
           // Case 4b-1. (3a in the book)
           //
-          cout << "case 4b-1" << endl;
+          DumpDebugMessage(">>>> Delete case 4b-1.");
           RotateLeft(x, i);
           Delete(y, key);
         } else if (y->n >= t) {
           //
           // Case 4b-2. (3a in the book)
           //
-          cout << "case 4b-2" << endl;
+          DumpDebugMessage(">>>> Delete case 4b-2.");
           RotateRight(x, i);
           Delete(z, key);
         } else {
           //
           // Case 4c. (3b in the book)
           //
-          cout << "case 4c" << endl;
+          DumpDebugMessage(">>>> Delete case 4c.");
           Merge(x, i);
           if (root_->n == 0) {
             // DiskDelete(root_);
             delete root_;
             root_ = y;
           }
-          //Delete(y, key);
+          Delete(y, key);
         }
       }
     }
@@ -453,7 +475,7 @@ void BTree::Dump(Node* x, int level)
 
 void TestInsert(BTree& bt, const string& key, const string& value)
 {
-  cout << ">>> Insert \'" << key << "\': " << endl;
+  cout << "Insert \'" << key << "\': " << endl;
   bt.Insert(key, value);
   bt.Dump();
   cout << "--" << endl;
@@ -463,7 +485,7 @@ void TestInsert(BTree& bt, const string& key, const string& value)
 
 void TestDelete(BTree& bt, const string& key)
 {
-  cout << ">>> Delete \'" << key << "\': " << endl;
+  cout << "Delete \'" << key << "\': " << endl;
   bt.Delete(key);
   bt.Dump();
   cout << "--" << endl;
@@ -473,7 +495,7 @@ void TestDelete(BTree& bt, const string& key)
 
 void TestSearch(BTree& bt, const string& key)
 {
-  cout << ">>> Search \'" << key << "\': ";
+  cout << "Search \'" << key << "\': ";
   string* p_value;
   bt.Search(key, &p_value);
   if (p_value != NULL) {
@@ -523,15 +545,20 @@ int main()
     "A", "B", "C", "D", "E", "G", "J", "K",
     "L", "M", "N", "O", "P", "Q", "R", "S",
     "T", "U", "V", "X", "Y", "Z"};
-  for (int i = 0; i < sizeof(a) / sizeof(string); i++) {
-    bt.Insert(a[i], "");
+  int n = sizeof(a) / sizeof(string);
+  char buff[10];
+  for (int i = 0; i < n; i++) {
+    sprintf(buff, "Data_%s", a[i].c_str());
+    TestInsert(bt, a[i], buff);
   }
-  bt.Dump();
   //
   TestDelete(bt, "U"); // Case 2b
   TestDelete(bt, "S"); // Case 4b-1
   TestDelete(bt, "Q"); // Case 4c
   TestDelete(bt, "Z"); // Case 4c
+  //
+  TestSearch(bt, "X");
+  TestSearch(bt, "F");
   //
   return 0;
 }
