@@ -106,17 +106,64 @@ Since 04/16/2014
 
 ### Basic Operations
 
-* Schemes:
-    - **Disk access scheme**:
-        1. Root node is always in main memory.
-        2. All non-root nodes should be loaded from disk before read.
-        3. All nodes should be written to disk after being updated.
-    - **One-pass scheme**: To minimize disk accesses, all algorithms should go downward only.
-* Search: Very similar to binary tree search. Use linear search for finding target child (or target key) in a node.
-* Insert:
-    - **Root splitting**: If we found that the root is full, then create a new root and then split the original root. Tree grows only by means of root splitting.
-    - **Subtree splitting**: if we found the destination child of node \\(x\\) is full, then split this child and move its median key to \\(x\\).
-* Delete: Too complicated. I'll leave it here for now.
+#### General Ideas
+
+* **Disk access scheme**:
+    1. Root node is always in main memory.
+    2. All non-root nodes should be loaded from disk before read.
+    3. All nodes should be written to disk after being updated.
+
+* **One-pass scheme**: To minimize disk accesses, all algorithms should go downward only, so that repeat reads and writes can be avoided.
+
+#### Search
+
+Very similar to binary tree search. We can use linear search to find the target child (or target key) in a node. Note that binary search is also good.
+
+#### Insert
+
+* **Recursion invariance**: In each recursion, we guarantee that either the current processing node \\(x\\) is the root node or it has at most \\(2 \cdot t - 1\\) keys.
+* **Child split**: if we find the child of node \\(x\\) is full, then we split it and move its median key to \\(x\\).
+* Pseudo code:
+    - If \\(x\\) is a full root:
+        - **(Case 1)** Create a new root, attach the original root to the new root as its only child, and then split this new root's only child. Tree grows only by means of root splitting.
+    - Else:
+        - If \\(x\\) is a non-leaf node:
+            - **(Case 2a)** If \\(x\\)'s target child is not full, then recursively insert into the target child. Otherwise, split the target child and then recursively insert into the target child.
+        - Else:
+            - **(Case 2b)** Simply insert into this node.
+
+#### Delete
+
+* **Recursion invariance**: In each recursion, we guarantee that either the current processing node \\(x\\) is the root node or it has at least \\(t\\) keys.
+* **Child merge**: Merge \\(x\\)'s two adjacent children, \\(y\\) and \\(z\\), and \\(x\\)'s corresponding key into \\(y\\), and then remove \\(z\\).
+* **Rotate left/right**: If a child node has \\(t - 1\\) keys, and its right/left sibling has at least \\(t\\) keys, then we can move the corresponding key in \\(x\\) down to the child, and then move the adjacent key in right/left sibling up to \\(x\\).
+* Pseudo code:
+    - If \\(x\\) contains the target key:
+        - If \\(x\\) is a leaf node:
+            - **(Case 1)** Simply delete from this node.
+        - Else:
+            - Let \\(y\\) and \\(z\\) be \\(x\\)'s two children corresponding to the target key.
+            - If \\(y\\) has at least \\(t\\) keys:
+                - **(Case 2a)** Replace the target key in \\(x\\) with the last key in \\(y\\), and then recursively delete the last key in \\(y\\).
+            - Else if \\(z\\) has at least \\(t\\) keys:
+                - **(Case 2b)** Replace the target key in \\(x\\) with the first key in \\(z\\), and then recursively delete the first key in \\(z\\).
+            - Else:
+                - **(Case 2c)** Merge the corresponding children, i.e. \\(y\\) and \\(z\\), of \\(x\\) into \\(y\\), and then recursively delete the target key in \\(y\\). 
+    - Else:
+        - If \\(x\\) is a leaf node:
+            - **(Case 3)** Key not found. Do nothing.
+        - Else:
+            - Let \\(y\\) be the target child.
+            - If \\(y\\) has at least \\(t\\) keys:
+                - **(Case 4a)** Recursively delete the target key from \\(y\\).
+            - Else:
+                - Let \\(y\\) and \\(z\\) be \\(x\\)'s two children around the target key.
+                - If \\(z\\) has at least \\(t\\) keys:
+                    - **(Case 4b)** Rotate left and recursively delete the target key from \\(y\\).
+                - Else if \\(y\\) has at least \\(t\\) keys:
+                    - **(Case 4c)** Rotate right and recursively delete the target key from \\(z\\).
+                - Else:
+                    - **(Case 4d)** Merge the corresponding children, i.e. \\(y\\) and \\(z\\), of \\(x\\) into \\(y\\), and then recursively delete the target key in \\(y\\). Update root pointer if the root becomes empty.
 
 # Part VI. Graph Algorithms
 
